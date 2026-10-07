@@ -4,7 +4,7 @@ import App from "./App";
 test("renders application title", () => {
   render(<App />);
 
-  expect(screen.getByText(/AWS 3-TIER WEB APP DEMO/i)).toBeInTheDocument();
+  expect(screen.getByText(/AWS 3-TIER WEB APP/i)).toBeInTheDocument();
 });
 
 test("renders Home menu", () => {

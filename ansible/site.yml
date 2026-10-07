@@ -16,6 +16,7 @@
     - name: Cài Docker SDK cho Ansible
       ansible.builtin.pip:
         name: docker
+        extra_args: --ignore-installed
 
     - name: Chạy node_exporter
       community.docker.docker_container:

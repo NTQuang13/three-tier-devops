@@ -1,0 +1,3 @@
+db_host: three-tier-aurora.cluster-ccr1fnswluhh.us-east-1.rds.amazonaws.com
+internal_lb_dns: internal-app-tier-internal-lb-1522754940.us-east-1.elb.amazonaws.com
+public_lb_dns: web-tier-public-lb-997925357.us-east-1.elb.amazonaws.com

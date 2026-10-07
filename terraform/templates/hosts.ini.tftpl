@@ -1,0 +1,18 @@
+[jenkins]
+jenkins ansible_host=${jenkins_ip} ansible_connection=local
+
+[monitoring]
+monitoring ansible_host=${monitoring_ip}
+
+[web]
+%{ for i, ip in web_ips ~}
+web${i + 1} ansible_host=${ip}
+%{ endfor ~}
+
+[app]
+%{ for i, ip in app_ips ~}
+app${i + 1} ansible_host=${ip}
+%{ endfor ~}
+
+[all:vars]
+ansible_user=ec2-user

@@ -1,0 +1,75 @@
+- name: Deploy app tier
+  hosts: app
+  become: true
+  serial: 1
+  tasks:
+    - name: Chạy container app
+      community.docker.docker_container:
+        name: app-tier
+        image: "{{ docker_user }}/three-tier-app:{{ image_tag }}"
+        state: started
+        restart_policy: unless-stopped
+        published_ports: ["4000:4000"]
+        env:
+          DB_HOST: "{{ db_host }}"
+          DB_USER: admin
+          DB_PWD: "{{ db_password }}"
+          DB_DATABASE: webappdb
+      no_log: true
+
+    - name: Chờ app healthy
+      ansible.builtin.uri:
+        url: http://localhost:4000/health
+      register: r
+      until: r.status == 200
+      retries: 15
+      delay: 4
+
+    - name: Chờ ALB đánh dấu healthy rồi mới sang VM kế tiếp
+      ansible.builtin.pause:
+        seconds: 30
+
+- name: Deploy web tier
+  hosts: web
+  become: true
+  serial: 1
+  tasks:
+    - name: Chạy container web
+      community.docker.docker_container:
+        name: web-tier
+        image: "{{ docker_user }}/three-tier-web:{{ image_tag }}"
+        state: started
+        restart_policy: unless-stopped
+        published_ports: ["80:80"]
+        env:
+          INTERNAL_LB_DNS: "{{ internal_lb_dns }}"
+
+    - name: Chờ web healthy
+      ansible.builtin.uri:
+        url: http://localhost:80/health
+      register: r
+      until: r.status == 200
+      retries: 15
+      delay: 4
+
+    - name: Chờ ALB
+      ansible.builtin.pause:
+        seconds: 30
+
+- name: Smoke test qua Public ALB
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Health
+      ansible.builtin.uri:
+        url: "http://{{ public_lb_dns }}/health"
+      register: h
+      until: h.status == 200
+      retries: 10
+      delay: 6
+
+    - name: Luồng đầy đủ Web -> Internal ALB -> App -> Aurora
+      ansible.builtin.uri:
+        url: "http://{{ public_lb_dns }}/api/transaction"
+        status_code: 200

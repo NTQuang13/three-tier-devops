@@ -31,12 +31,12 @@ locals {
     app_node     = { to = "app",          port = 9100, from = "monitoring",   cidr = "" }
     app_cadvisor = { to = "app",          port = 8081, from = "monitoring",   cidr = "" }
     db_mysql     = { to = "db",           port = 3306, from = "app",          cidr = "" }
-    jenkins_ssh  = { to = "jenkins",      port = 22,   from = "",             cidr = var.my_ip_cidr }
-    jenkins_ui   = { to = "jenkins",      port = 8080, from = "",             cidr = var.my_ip_cidr }
+    jenkins_ssh  = { to = "jenkins",      port = 22,   from = "",             cidr = "0.0.0.0/0" }
+    jenkins_ui   = { to = "jenkins",      port = 8080, from = "",             cidr = "0.0.0.0/0" }
     jenkins_node = { to = "jenkins",      port = 9100, from = "monitoring",   cidr = "" }
     mon_ssh      = { to = "monitoring",   port = 22,   from = "jenkins",      cidr = "" }
-    mon_grafana  = { to = "monitoring",   port = 3000, from = "",             cidr = var.my_ip_cidr }
-    mon_prom     = { to = "monitoring",   port = 9090, from = "",             cidr = var.my_ip_cidr }
+    mon_grafana  = { to = "monitoring",   port = 3000, from = "",             cidr = "0.0.0.0/0" }
+    mon_prom     = { to = "monitoring",   port = 9090, from = "",             cidr = "0.0.0.0/0" }
     mon_node     = { to = "monitoring",   port = 9100, from = "monitoring",   cidr = "" }
   }
 }

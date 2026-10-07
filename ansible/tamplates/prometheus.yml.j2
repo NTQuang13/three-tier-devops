@@ -1,0 +1,23 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: node
+    static_configs:
+{% for g in ['web', 'app', 'jenkins', 'monitoring'] %}
+      - targets: [{% for h in groups[g] %}'{{ hostvars[h].ansible_host }}:9100'{{ ',' if not loop.last }}{% endfor %}]
+        labels:
+          tier: {{ g }}
+{% endfor %}
+
+  - job_name: cadvisor
+    static_configs:
+{% for g in ['web', 'app'] %}
+      - targets: [{% for h in groups[g] %}'{{ hostvars[h].ansible_host }}:8081'{{ ',' if not loop.last }}{% endfor %}]
+        labels:
+          tier: {{ g }}
+{% endfor %}

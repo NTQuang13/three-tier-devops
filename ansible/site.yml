@@ -1,0 +1,122 @@
+- name: Docker + node_exporter trên mọi VM
+  hosts: web:app:monitoring:jenkins
+  become: true
+  tasks:
+    - name: Cài Docker và pip
+      ansible.builtin.dnf:
+        name: [docker, python3-pip]
+        state: present
+
+    - name: Bật Docker
+      ansible.builtin.systemd:
+        name: docker
+        enabled: true
+        state: started
+
+    - name: Cài Docker SDK cho Ansible
+      ansible.builtin.pip:
+        name: docker
+
+    - name: Chạy node_exporter
+      community.docker.docker_container:
+        name: node-exporter
+        image: prom/node-exporter:v1.8.2
+        restart_policy: unless-stopped
+        network_mode: host
+        pid_mode: host
+        volumes: ["/:/host:ro,rslave"]
+        command: ["--path.rootfs=/host"]
+
+- name: cAdvisor trên web và app
+  hosts: web:app
+  become: true
+  tasks:
+    - name: Chạy cAdvisor
+      community.docker.docker_container:
+        name: cadvisor
+        image: gcr.io/cadvisor/cadvisor:v0.49.1
+        restart_policy: unless-stopped
+        privileged: true
+        published_ports: ["8081:8080"]
+        volumes:
+          - /:/rootfs:ro
+          - /var/run:/var/run:ro
+          - /sys:/sys:ro
+          - /var/lib/docker/:/var/lib/docker:ro
+
+- name: Khởi tạo bảng trong Aurora
+  hosts: app[0]
+  become: true
+  tasks:
+    - name: Copy init.sql
+      ansible.builtin.copy:
+        src: files/init.sql
+        dest: /tmp/init.sql
+        mode: "0644"
+
+    - name: Chạy init.sql bằng mysql client container
+      ansible.builtin.shell: >
+        docker run --rm -i -e MYSQL_PWD mysql:8.0
+        mysql -h {{ db_host }} -u admin < /tmp/init.sql
+      environment:
+        MYSQL_PWD: "{{ db_password }}"
+      changed_when: false
+      no_log: true
+
+- name: Prometheus + Grafana
+  hosts: monitoring
+  become: true
+  handlers:
+    - name: Restart prometheus
+      ansible.builtin.command: docker restart prometheus
+  tasks:
+    - name: Tạo thư mục cấu hình
+      ansible.builtin.file:
+        path: /opt/monitoring/grafana-provisioning/datasources
+        state: directory
+        mode: "0755"
+
+    - name: Prometheus config
+      ansible.builtin.template:
+        src: templates/prometheus.yml.j2
+        dest: /opt/monitoring/prometheus.yml
+        mode: "0644"
+      notify: Restart prometheus
+
+    - name: Grafana datasource
+      ansible.builtin.copy:
+        src: files/grafana-datasource.yml
+        dest: /opt/monitoring/grafana-provisioning/datasources/ds.yml
+        mode: "0644"
+
+    - name: Docker network
+      community.docker.docker_network:
+        name: monitoring
+
+    - name: Chạy Prometheus
+      community.docker.docker_container:
+        name: prometheus
+        image: prom/prometheus:v2.54.1
+        restart_policy: unless-stopped
+        networks: [{ name: monitoring }]
+        published_ports: ["9090:9090"]
+        volumes:
+          - /opt/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+          - prometheus_data:/prometheus
+        command:
+          - --config.file=/etc/prometheus/prometheus.yml
+          - --storage.tsdb.retention.time=7d
+
+    - name: Chạy Grafana
+      community.docker.docker_container:
+        name: grafana
+        image: grafana/grafana:11.2.0
+        restart_policy: unless-stopped
+        networks: [{ name: monitoring }]
+        published_ports: ["3000:3000"]
+        env:
+          GF_SECURITY_ADMIN_PASSWORD: "{{ grafana_password }}"
+        volumes:
+          - grafana_data:/var/lib/grafana
+          - /opt/monitoring/grafana-provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      no_log: true

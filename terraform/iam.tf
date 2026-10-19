@@ -43,6 +43,7 @@ data "aws_iam_policy_document" "jenkins" {
   statement {
     actions = [
       "ecr:BatchCheckLayerAvailability",
+      "ecr:DescribeRepositories",
       "ecr:InitiateLayerUpload",
       "ecr:UploadLayerPart",
       "ecr:CompleteLayerUpload",

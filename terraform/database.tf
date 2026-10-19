@@ -3,7 +3,8 @@ resource "aws_rds_cluster" "aurora" {
   engine                 = "aurora-mysql"
   database_name          = "webappdb"
   master_username        = "admin"
-  master_password        = var.db_password
+  master_password        = random_password.db.result
+  apply_immediately       = true
   db_subnet_group_name   = module.vpc.database_subnet_group_name
   vpc_security_group_ids = [aws_security_group.this["db"].id]
   skip_final_snapshot    = true

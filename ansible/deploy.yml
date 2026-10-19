@@ -3,17 +3,39 @@
   become: true
   serial: 1
   tasks:
+    - name: Đăng nhập ECR bằng instance role
+      ansible.builtin.shell: |
+        set -o pipefail
+        aws ecr get-login-password --region {{ aws_region }} \
+          | docker login --username AWS --password-stdin {{ ecr_registry }}
+      args:
+        executable: /bin/bash
+      changed_when: false
+      no_log: true
+
+    - name: Lấy mật khẩu DB từ Secrets Manager
+      ansible.builtin.shell: |
+        set -o pipefail
+        aws secretsmanager get-secret-value --region {{ aws_region }} \
+          --secret-id {{ db_secret_id }} --query SecretString --output text \
+          | jq -r .password
+      args:
+        executable: /bin/bash
+      register: db_secret
+      changed_when: false
+      no_log: true
+
     - name: Chạy container app
       community.docker.docker_container:
         name: app-tier
-        image: "{{ docker_user }}/three-tier-app:{{ image_tag }}"
+        image: "{{ ecr_registry }}/three-tier-app:{{ image_tag }}"
         state: started
         restart_policy: unless-stopped
         published_ports: ["4000:4000"]
         env:
           DB_HOST: "{{ db_host }}"
           DB_USER: admin
-          DB_PWD: "{{ db_password }}"
+          DB_PWD: "{{ db_secret.stdout }}"
           DB_DATABASE: webappdb
       no_log: true
 
@@ -25,7 +47,7 @@
       retries: 15
       delay: 4
 
-    - name: Chờ ALB đánh dấu healthy rồi mới sang VM kế tiếp
+    - name: Chờ ALB đánh dấu healthy
       ansible.builtin.pause:
         seconds: 30
 
@@ -34,10 +56,20 @@
   become: true
   serial: 1
   tasks:
+    - name: Đăng nhập ECR bằng instance role
+      ansible.builtin.shell: |
+        set -o pipefail
+        aws ecr get-login-password --region {{ aws_region }} \
+          | docker login --username AWS --password-stdin {{ ecr_registry }}
+      args:
+        executable: /bin/bash
+      changed_when: false
+      no_log: true
+
     - name: Chạy container web
       community.docker.docker_container:
         name: web-tier
-        image: "{{ docker_user }}/three-tier-web:{{ image_tag }}"
+        image: "{{ ecr_registry }}/three-tier-web:{{ image_tag }}"
         state: started
         restart_policy: unless-stopped
         published_ports: ["80:80"]

@@ -14,6 +14,9 @@ resource "local_file" "group_vars" {
     db_host: ${aws_rds_cluster.aurora.endpoint}
     internal_lb_dns: ${aws_lb.internal.dns_name}
     public_lb_dns: ${aws_lb.public.dns_name}
+    aws_region: ${var.region}
+    ecr_registry: ${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.region}.amazonaws.com
+    db_secret_id: ${aws_secretsmanager_secret.db.name}
   EOT
 }
 

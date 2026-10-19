@@ -2,9 +2,9 @@
   hosts: web:app:monitoring:jenkins
   become: true
   tasks:
-    - name: Cài Docker và pip
+    - name: Cài Docker và pip vaf jq
       ansible.builtin.dnf:
-        name: [docker, python3-pip]
+        name: [docker, python3-pip, jq]
         state: present
 
     - name: Bật Docker
@@ -55,12 +55,24 @@
         dest: /tmp/init.sql
         mode: "0644"
 
+    - name: Lấy mật khẩu DB từ Secrets Manager
+      ansible.builtin.shell: |
+        set -o pipefail
+        aws secretsmanager get-secret-value --region {{ aws_region }} \
+          --secret-id {{ db_secret_id }} --query SecretString --output text \
+          | jq -r .password
+      args:
+        executable: /bin/bash
+      register: db_secret
+      changed_when: false
+      no_log: true
+
     - name: Chạy init.sql bằng mysql client container
       ansible.builtin.shell: >
         docker run --rm -i -e MYSQL_PWD mysql:8.0
         mysql -h {{ db_host }} -u admin < /tmp/init.sql
       environment:
-        MYSQL_PWD: "{{ db_password }}"
+        MYSQL_PWD: "{{ db_secret.stdout }}"
       changed_when: false
       no_log: true
 

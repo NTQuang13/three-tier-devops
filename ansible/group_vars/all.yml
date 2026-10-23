@@ -1,6 +1,6 @@
 db_host: three-tier-aurora.cluster-c5s22e2ueyk6.ap-southeast-1.rds.amazonaws.com
-internal_lb_dns: internal-app-tier-internal-lb-1018226120.ap-southeast-1.elb.amazonaws.com
-public_lb_dns: web-tier-public-lb-912691541.ap-southeast-1.elb.amazonaws.com
+internal_lb_dns: internal-app-tier-internal-lb-1890107048.ap-southeast-1.elb.amazonaws.com
+public_lb_dns: web-tier-public-lb-1939357007.ap-southeast-1.elb.amazonaws.com
 aws_region: ap-southeast-1
 ecr_registry: 410244642625.dkr.ecr.ap-southeast-1.amazonaws.com
 db_secret_id: three-tier/db-credentials

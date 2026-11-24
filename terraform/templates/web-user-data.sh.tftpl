@@ -1,0 +1,46 @@
+#!/bin/bash
+set -euo pipefail
+
+dnf install -y nginx nodejs nodejs-npm
+systemctl enable --now amazon-ssm-agent
+
+install -d -o ec2-user -g ec2-user /home/ec2-user/web-tier
+
+aws s3 cp \
+  s3://${bucket}/web-tier/ \
+  /home/ec2-user/web-tier/ \
+  --recursive \
+  --region ${region}
+
+aws s3 cp \
+  s3://${bucket}/nginx.conf \
+  /etc/nginx/nginx.conf \
+  --region ${region}
+
+chown -R ec2-user:ec2-user /home/ec2-user/web-tier
+
+cd /home/ec2-user/web-tier
+
+if [ -f package-lock.json ]; then
+  sudo -u ec2-user npm ci
+else
+  sudo -u ec2-user npm install
+fi
+
+sudo -u ec2-user npm run build
+
+# Cho Nginx đi qua thư mục home và đọc static files.
+chmod 755 /home/ec2-user
+chmod 755 /home/ec2-user/web-tier
+chmod -R a+rX /home/ec2-user/web-tier/build
+
+# Hỗ trợ cả trường hợp AMI bật SELinux enforcing.
+if command -v selinuxenabled >/dev/null 2>&1 && selinuxenabled; then
+  setsebool -P httpd_can_network_connect 1
+  setsebool -P httpd_enable_homedirs 1
+  chcon -R -t httpd_sys_content_t /home/ec2-user/web-tier/build
+fi
+
+nginx -t
+systemctl enable nginx
+systemctl restart nginx

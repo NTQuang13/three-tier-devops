@@ -1,0 +1,88 @@
+#!/bin/bash
+set -euo pipefail
+
+dnf install -y nodejs nodejs-npm mariadb105
+systemctl enable --now amazon-ssm-agent
+
+install -d -o ec2-user -g ec2-user /home/ec2-user/app-tier
+
+aws s3 cp \
+  s3://${bucket}/app-tier/ \
+  /home/ec2-user/app-tier/ \
+  --recursive \
+  --region ${region}
+
+cat > /home/ec2-user/app-tier/DbConfig.js <<'CONFIG'
+module.exports = Object.freeze({
+  DB_HOST: '${db_host}',
+  DB_USER: 'admin',
+  DB_PWD: '${db_password}',
+  DB_DATABASE: 'webappdb'
+});
+CONFIG
+
+chown -R ec2-user:ec2-user /home/ec2-user/app-tier
+chmod 600 /home/ec2-user/app-tier/DbConfig.js
+
+cd /home/ec2-user/app-tier
+sudo -u ec2-user npm ci --omit=dev
+
+cat > /root/three-tier-db.cnf <<'CONFIG'
+[client]
+host=${db_host}
+user=admin
+password=${db_password}
+CONFIG
+
+chmod 600 /root/three-tier-db.cnf
+trap 'rm -f /root/three-tier-db.cnf' EXIT
+
+# Hai App instance có thể chạy đồng thời.
+# IF NOT EXISTS bảo đảm việc tạo bảng có thể chạy lại.
+db_ready=false
+
+for attempt in $(seq 1 60); do
+  if mysql --defaults-extra-file=/root/three-tier-db.cnf <<'SQL'
+CREATE DATABASE IF NOT EXISTS webappdb;
+USE webappdb;
+CREATE TABLE IF NOT EXISTS transactions (
+  id INT NOT NULL AUTO_INCREMENT,
+  amount DECIMAL(10,2),
+  description VARCHAR(100),
+  PRIMARY KEY (id)
+);
+SQL
+  then
+    db_ready=true
+    break
+  fi
+  sleep 10
+done
+
+if [ "$db_ready" != "true" ]; then
+  echo "Database initialization failed"
+  exit 1
+fi
+
+cat > /etc/systemd/system/app-tier.service <<'SERVICE'
+[Unit]
+Description=App tier
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=ec2-user
+Group=ec2-user
+WorkingDirectory=/home/ec2-user/app-tier
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node index.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+
+systemctl daemon-reload
+systemctl enable --now app-tier

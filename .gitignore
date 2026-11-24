@@ -1,0 +1,50 @@
+# Dependencies and generated frontend files
+node_modules/
+build/
+dist/
+coverage/
+.cache/
+
+# Terraform working directories, state, plans and local variable values
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+terraform.tfvars
+terraform.tfvars.json
+*.auto.tfvars
+*.auto.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+crash.log
+crash.*.log
+.terraformrc
+terraform.rc
+
+# Keep .terraform.lock.hcl tracked to pin provider selections.
+# Use the *.tfplan suffix for every saved Terraform plan.
+
+# Credentials and local environment
+.aws/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+app-tier/DbConfig.js
+
+# Local agent/editor settings
+.agents/
+.codex/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs and operating-system files
+*.log
+.DS_Store
+Thumbs.db

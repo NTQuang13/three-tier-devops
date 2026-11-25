@@ -25,23 +25,23 @@ Internet → External ALB:80 → Web EC2 / Nginx:80
 
 ## 2. Cấu trúc mã nguồn
 
-| Đường dẫn | Chức năng |
-|---|---|
-| `app-tier/` | Backend Node.js, API transaction |
-| `web-tier/` | Frontend React |
-| `nginx.conf` | Static files, `/health`, proxy `/api/` |
-| `terraform/versions.tf` | AWS provider, hiện chốt phiên bản 6.74.0 |
-| `terraform/variables.tf` | Region, AZ, bucket, mật khẩu |
-| `terraform/network.tf`, `routes.tf` | VPC, subnet, NAT, route, S3 endpoint |
-| `terraform/security-groups.tf` | Năm Security Group |
-| `terraform/iam.tf` | Role, policy attachment, instance profile |
-| `terraform/database.tf` | Aurora và DB subnet group |
-| `terraform/s3.tf` | Bucket và upload source |
-| `terraform/app-alb.tf`, `web-alb.tf` | ALB, listener, target group |
-| `terraform/launch-templates.tf` | AMI, EC2, IAM profile, user data |
-| `terraform/autoscaling.tf` | ASG, CPU policy, rolling refresh |
-| `terraform/templates/` | Script bootstrap App/Web |
-| `terraform/outputs.tf` | URL, endpoint, bucket, target group ARN |
+| Đường dẫn                            | Chức năng                                 |
+| ------------------------------------ | ----------------------------------------- |
+| `app-tier/`                          | Backend Node.js, API transaction          |
+| `web-tier/`                          | Frontend React                            |
+| `nginx.conf`                         | Static files, `/health`, proxy `/api/`    |
+| `terraform/versions.tf`              | AWS provider, hiện chốt phiên bản 6.74.0  |
+| `terraform/variables.tf`             | Region, AZ, bucket, mật khẩu              |
+| `terraform/network.tf`, `routes.tf`  | VPC, subnet, NAT, route, S3 endpoint      |
+| `terraform/security-groups.tf`       | Năm Security Group                        |
+| `terraform/iam.tf`                   | Role, policy attachment, instance profile |
+| `terraform/database.tf`              | Aurora và DB subnet group                 |
+| `terraform/s3.tf`                    | Bucket và upload source                   |
+| `terraform/app-alb.tf`, `web-alb.tf` | ALB, listener, target group               |
+| `terraform/launch-templates.tf`      | AMI, EC2, IAM profile, user data          |
+| `terraform/autoscaling.tf`           | ASG, CPU policy, rolling refresh          |
+| `terraform/templates/`               | Script bootstrap App/Web                  |
+| `terraform/outputs.tf`               | URL, endpoint, bucket, target group ARN   |
 
 Các lệnh **local** bên dưới chạy trong thư mục `terraform`. Các lệnh **EC2** chạy qua Console → EC2 → chọn instance → Connect → Session Manager. Các placeholder `<...>` cần thay bằng giá trị thật.
 
@@ -69,7 +69,7 @@ aws sts get-caller-identity
 
 ### 3.2 Khai báo biến
 
-Tạo hoặc chỉnh `terraform.tfvars` trong thư mục `terraform`:
+Chỉnh `terraform.tfvars` trong thư mục `terraform`:
 
 ```hcl
 aws_region = "ap-southeast-1"
@@ -163,12 +163,12 @@ for ROUTE in / /health /api/health /api/transaction; do
 done
 ```
 
-| URL | Kết quả mong đợi | Phần được kiểm tra |
-|---|---|---|
-| `/` | HTML React | External ALB, Nginx |
-| `/health` | Web Tier Health Check | Web HTTP |
-| `/api/health` | This is the health check | Proxy, Internal ALB, App HTTP |
-| `/api/transaction` | JSON có `result` | Kết nối đến Aurora |
+| URL                | Kết quả mong đợi         | Phần được kiểm tra            |
+| ------------------ | ------------------------ | ----------------------------- |
+| `/`                | HTML React               | External ALB, Nginx           |
+| `/health`          | Web Tier Health Check    | Web HTTP                      |
+| `/api/health`      | This is the health check | Proxy, Internal ALB, App HTTP |
+| `/api/transaction` | JSON có `result`         | Kết nối đến Aurora            |
 
 `/api/health` không kiểm tra DB. Mở `$APP_URL` trong trình duyệt, vào DB Demo; kiểm tra JS/CSS tải thành công và refresh tại trang DB Demo không bị 404.
 
@@ -358,14 +358,14 @@ Kỳ vọng cả bốn thuộc tính `true`. VPC Console → Endpoints: S3 endpo
 
 ### 6.4 Security Group
 
-| Nguồn | Đích | Kỳ vọng |
-|---|---|---|
-| Internet | External ALB:80 | Thành công |
-| Web EC2 | Internal ALB:80 | Thành công |
-| App EC2 | Aurora:3306 | Thành công |
-| Internet | Web public IP:80 | Bị chặn |
-| Web EC2 | App private IP:4000 | Bị chặn |
-| Web EC2 | Aurora:3306 | Bị chặn |
+| Nguồn    | Đích                | Kỳ vọng    |
+| -------- | ------------------- | ---------- |
+| Internet | External ALB:80     | Thành công |
+| Web EC2  | Internal ALB:80     | Thành công |
+| App EC2  | Aurora:3306         | Thành công |
+| Internet | Web public IP:80    | Bị chặn    |
+| Web EC2  | App private IP:4000 | Bị chặn    |
+| Web EC2  | Aurora:3306         | Bị chặn    |
 
 Trên Web EC2:
 
@@ -419,15 +419,15 @@ done
 
 ## 8. Các thiết lập giúp test nhanh
 
-| Thông số hiện tại | Giá trị | Vai trò |
-|---|---:|---|
-| ALB health interval | 10 giây | Kiểm tra thường xuyên |
-| Healthy/unhealthy threshold | 2/2 | Số lần đạt/lỗi để chuyển trạng thái |
-| Deregistration delay | 15 giây | Rút ngắn draining; chỉ phù hợp request ngắn của lab |
-| Refresh instance warmup | 30 giây | Chờ ổn định thêm sau healthy khi refresh |
-| Default instance warmup | 300 giây | Tránh scaling phản ứng với CPU bootstrap |
-| App/Web grace period | 300/600 giây | Bảo vệ instance trong lúc cài package/build |
-| Detailed Monitoring | Bật | Metric EC2 theo chu kỳ một phút |
+| Thông số hiện tại           |      Giá trị | Vai trò                                             |
+| --------------------------- | -----------: | --------------------------------------------------- |
+| ALB health interval         |      10 giây | Kiểm tra thường xuyên                               |
+| Healthy/unhealthy threshold |          2/2 | Số lần đạt/lỗi để chuyển trạng thái                 |
+| Deregistration delay        |      15 giây | Rút ngắn draining; chỉ phù hợp request ngắn của lab |
+| Refresh instance warmup     |      30 giây | Chờ ổn định thêm sau healthy khi refresh            |
+| Default instance warmup     |     300 giây | Tránh scaling phản ứng với CPU bootstrap            |
+| App/Web grace period        | 300/600 giây | Bảo vệ instance trong lúc cài package/build         |
+| Detailed Monitoring         |          Bật | Metric EC2 theo chu kỳ một phút                     |
 
 Grace period không phải thời gian chờ cố định mỗi lần test trên máy đã ổn định. Không giảm xuống vài chục giây khi Web còn phải build React. `wait_for_capacity_timeout = "20m"` chỉ giới hạn thời gian Terraform chờ, giảm nó không làm máy khởi động nhanh hơn.
 
@@ -455,16 +455,16 @@ sudo systemctl status nginx --no-pager
 sudo tail -n 100 /var/log/nginx/error.log
 ```
 
-| Hiện tượng | Kiểm tra |
-|---|---|
-| Terraform báo region/AZ không khớp | `AWS_REGION`, profile, `aws_region`, `az_a`, `az_b` |
-| S3 download hoặc npm/dnf thất bại | IAM, NAT/public route, DNS, cloud-init log |
-| Web chưa healthy | Build React hoàn tất chưa, nginx config và quyền đọc build |
-| `/health` OK, `/api/health` lỗi | Nginx proxy DNS, Internal ALB target và SG |
-| App health OK, transaction lỗi | Aurora endpoint/password, DB SG, bảng và journal |
-| Không scale-out | CPU trung bình toàn ASG, metric, warmup, policy và Activity |
-| Không scale-in ngay | Tải đã hết chưa, thời gian đánh giá policy, warmup |
-| Refresh thất bại | `StatusReason`, target health và bootstrap log |
+| Hiện tượng                         | Kiểm tra                                                    |
+| ---------------------------------- | ----------------------------------------------------------- |
+| Terraform báo region/AZ không khớp | `AWS_REGION`, profile, `aws_region`, `az_a`, `az_b`         |
+| S3 download hoặc npm/dnf thất bại  | IAM, NAT/public route, DNS, cloud-init log                  |
+| Web chưa healthy                   | Build React hoàn tất chưa, nginx config và quyền đọc build  |
+| `/health` OK, `/api/health` lỗi    | Nginx proxy DNS, Internal ALB target và SG                  |
+| App health OK, transaction lỗi     | Aurora endpoint/password, DB SG, bảng và journal            |
+| Không scale-out                    | CPU trung bình toàn ASG, metric, warmup, policy và Activity |
+| Không scale-in ngay                | Tải đã hết chưa, thời gian đánh giá policy, warmup          |
+| Refresh thất bại                   | `StatusReason`, target health và bootstrap log              |
 
 Các hạn chế source hiện tại cần phân biệt với lỗi Terraform:
 
